@@ -8,6 +8,12 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
+const HORARIOS_DISPONIVEIS = Array.from({ length: 48 }, (_, i) => {
+  const horas = Math.floor(i / 2).toString().padStart(2, '0');
+  const minutos = (i % 2 === 0 ? '00' : '30');
+  return `${horas}:${minutos}`;
+});
+
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -21,19 +27,32 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
-// --- CONSTANTES ---
-const HORARIOS_DISPONIVEIS = Array.from({ length: 48 }, (_, i) => {
-  const horas = Math.floor(i / 2).toString().padStart(2, '0');
-  const minutos = (i % 2 === 0 ? '00' : '30');
-  return `${horas}:${minutos}`;
-});
-
 const REDES_SOCIAIS = [
-  { id: 'instagram', nome: 'Insta', icone: 'logo-instagram', formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'], limitesVideo: { Reels: 900, Story: 60, Feed: 3600 } },
-  { id: 'tiktok', nome: 'TikTok', icone: 'logo-tiktok', formatosPermitidos: ['Reels', 'Story'], limitesVideo: { Reels: 600, Story: 60 } },
-  { id: 'facebook', nome: 'Face', icone: 'logo-facebook', formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'], limitesVideo: { Feed: 14400, Reels: 90, Story: 60 } },
-  { id: 'linkedin', nome: 'LinkedIn', icone: 'logo-linkedin', formatosPermitidos: ['Feed', 'Carrossel'], limitesVideo: { Feed: 600 } },
-  { id: 'twitter', nome: 'X', icone: 'logo-twitter', formatosPermitidos: ['Feed', 'Carrossel'], limitesVideo: { Feed: 140 } }
+  {
+    id: 'instagram', nome: 'Insta', icone: 'logo-instagram',
+    formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'],
+    limitesVideo: { Reels: 900, Story: 60, Feed: 3600 }
+  },
+  {
+    id: 'tiktok', nome: 'TikTok', icone: 'logo-tiktok',
+    formatosPermitidos: ['Reels', 'Story'],
+    limitesVideo: { Reels: 600, Story: 60 }
+  },
+  {
+    id: 'facebook', nome: 'Face', icone: 'logo-facebook',
+    formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'],
+    limitesVideo: { Feed: 14400, Reels: 90, Story: 60 }
+  },
+  {
+    id: 'linkedin', nome: 'LinkedIn', icone: 'logo-linkedin',
+    formatosPermitidos: ['Feed', 'Carrossel'],
+    limitesVideo: { Feed: 600 }
+  },
+  {
+    id: 'twitter', nome: 'X', icone: 'logo-twitter',
+    formatosPermitidos: ['Feed', 'Carrossel'],
+    limitesVideo: { Feed: 140 }
+  }
 ];
 
 const TIPOS_POST = ['Feed', 'Reels', 'Carrossel', 'Story'];
@@ -45,7 +64,6 @@ const DIAS_SEMANA = [
   { id: 6, label: 'S', nome: 'sábado' }
 ];
 
-// --- COMPONENTE DO CARD DE POST ---
 const PostItem = memo(({ post }) => {
   const [estaAberto, setEstaAberto] = useState(false);
   const [textoResposta, setTextoResposta] = useState('');
@@ -62,19 +80,12 @@ const PostItem = memo(({ post }) => {
           <View style={[styles.statusBadge, { backgroundColor: post.color + '20' }]}>
             <Text style={[styles.statusText, { color: post.color }]}>{post.status.toUpperCase()}</Text>
           </View>
-
           {post.status === 'nao-visualizado' && (
             <View style={styles.badgePurple}>
               <Text style={styles.badgePurpleText}>NÃO VISUALIZADO</Text>
             </View>
           )}
-
-          <Text style={styles.postDate}>
-            {post.date} {post.hora ? `- ${post.hora}` : ''}
-            {post.tipoRecorrencia && post.tipoRecorrencia !== 'Nenhuma' && (
-              <Text>  <Ionicons name="sync-outline" size={14} color="#6a11cb" /></Text>
-            )}
-          </Text>
+          <Text style={styles.postDate}>{post.date} {post.hora ? `- ${post.hora}` : ''}</Text>
         </View>
         <Ionicons name={estaAberto ? "chevron-up" : "chevron-down"} size={20} color="#666" />
       </TouchableOpacity>
@@ -120,26 +131,39 @@ const PostItem = memo(({ post }) => {
   );
 });
 
-// --- TELA PRINCIPAL ---
 export default function CalendarScreen({ navigation }) {
+  const [showHoraPicker, setShowHoraPicker] = useState(false);
   const [dataSelecionada, setDataSelecionada] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [showHoraPicker, setShowHoraPicker] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('Todos');
   const [novoPost, setNovoPost] = useState({
     copy: '', redes: [], tipo: 'Feed', media: [], hora: '12:00', tipoRecorrencia: 'Nenhuma', diasPersonalizados: []
   });
 
   const [posts, setPosts] = useState([
-    { id: '1', date: '18/03/2026', dateString: '2026-03-18', hora: '18:30', status: 'pendente', color: '#FF9500', redes: ['instagram'], type: 'Reels', copy: 'Vídeo fachada.', media: [] },
+    {
+      id: '1', date: '18/03/2026', dateString: '2026-03-18', hora: '18:30', status: 'pendente', color: '#FF9500',
+      redes: ['instagram', 'facebook', 'tiktok'], type: 'Reels',
+      copy: 'Vídeo institucional da nova fachada.',
+      media: [{ id: 'm1', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=400' }]
+    },
+    {
+      id: '2', date: '20/03/2026', dateString: '2026-03-20', hora: '10:00', status: 'aprovado', color: '#28a745',
+      redes: ['instagram', 'linkedin'], type: 'Feed',
+      copy: 'Dicas de iluminação natural para arquitetos.',
+      media: [{ id: 'm2', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=400' }]
+    }
   ]);
 
   const postsFiltrados = useMemo(() => {
     let filtrados = posts;
     if (dataSelecionada) filtrados = filtrados.filter(p => p.dateString === dataSelecionada);
     if (filtroStatus !== 'Todos') {
-      const statusCheck = filtroStatus === 'Pendente' ? ['pendente', 'nao-visualizado'] : [filtroStatus.toLowerCase()];
-      filtrados = filtrados.filter(p => statusCheck.includes(p.status));
+      if (filtroStatus === 'Pendente') {
+        filtrados = filtrados.filter(p => p.status === 'pendente' || p.status === 'nao-visualizado');
+      } else {
+        filtrados = filtrados.filter(p => p.status === filtroStatus.toLowerCase());
+      }
     }
     return filtrados;
   }, [dataSelecionada, filtroStatus, posts]);
@@ -150,20 +174,32 @@ export default function CalendarScreen({ navigation }) {
     const multiple = mediaArray.length > 1;
     let permitidos = ['Story'];
     if (!hasVideo) permitidos.push('Carrossel');
-    if (!multiple) { permitidos.push('Feed'); permitidos.push('Reels'); }
+    if (!multiple) permitidos.push('Feed');
+    if (!multiple) permitidos.push('Reels');
     return permitidos;
   };
 
   const abrirGaleria = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') return;
-    let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.All, allowsMultipleSelection: true, quality: 1 });
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsMultipleSelection: true,
+      quality: 1,
+    });
     if (!result.canceled) {
-      const novasMidias = result.assets.map(asset => ({ id: asset.assetId || Math.random().toString(), url: asset.uri, type: asset.type, duration: asset.duration ? asset.duration / 1000 : 0 }));
+      const novasMidias = result.assets.map(asset => ({
+        id: asset.assetId || Math.random().toString(),
+        url: asset.uri,
+        type: asset.type,
+        duration: asset.duration ? asset.duration / 1000 : 0
+      }));
       setNovoPost(prev => {
         const todasMidias = [...prev.media, ...novasMidias];
         const formatosValidos = getFormatosPermitidos(todasMidias);
-        return { ...prev, media: todasMidias, tipo: formatosValidos.includes(prev.tipo) ? prev.tipo : formatosValidos[0], redes: [] };
+        let novoTipo = prev.tipo;
+        if (!formatosValidos.includes(novoTipo)) novoTipo = formatosValidos[0];
+        return { ...prev, media: todasMidias, tipo: novoTipo, redes: [] };
       });
     }
   };
@@ -172,50 +208,99 @@ export default function CalendarScreen({ navigation }) {
     setNovoPost(prev => {
       const novaLista = prev.media.filter(m => m.id !== id);
       const formatosValidos = getFormatosPermitidos(novaLista);
-      return { ...prev, media: novaLista, tipo: formatosValidos.includes(prev.tipo) ? prev.tipo : formatosValidos[0], redes: [] };
+      let novoTipo = prev.tipo;
+      if (!formatosValidos.includes(novoTipo)) novoTipo = formatosValidos[0];
+      return { ...prev, media: novaLista, tipo: novoTipo, redes: [] };
     });
   };
 
   const alternarRede = (redeId) => {
-    setNovoPost(prev => ({ ...prev, redes: prev.redes.includes(redeId) ? prev.redes.filter(r => r !== redeId) : [...prev.redes, redeId] }));
+    setNovoPost(prev => {
+      const selecionadas = prev.redes.includes(redeId) ? prev.redes.filter(r => r !== redeId) : [...prev.redes, redeId];
+      return { ...prev, redes: selecionadas };
+    });
   };
 
   const verificarAvisoTempo = (rede) => {
     const video = novoPost.media.find(m => m.type === 'video');
     if (!video) return null;
     const limite = rede.limitesVideo[novoPost.tipo];
-    return (limite && video.duration > limite) ? `Max: ${limite}s` : null;
+    if (limite && video.duration > limite) return `Max: ${limite}s`;
+    return null;
+  };
+
+  const adicionarDias = (dataStr, dias) => {
+    const [ano, mes, dia] = dataStr.split('-');
+    const data = new Date(ano, mes - 1, dia);
+    data.setDate(data.getDate() + dias);
+    return data.toISOString().split('T')[0];
   };
 
   const renderResumoRecorrencia = () => {
     if (novoPost.tipo !== 'Story' || novoPost.tipoRecorrencia === 'Nenhuma') return null;
-    let texto = novoPost.tipoRecorrencia;
-    if (novoPost.tipoRecorrencia === 'Personalizado') {
-      if (novoPost.diasPersonalizados.length === 0) return 'Selecione os dias abaixo';
-      texto = novoPost.diasPersonalizados.map(id => DIAS_SEMANA.find(d => d.id === id).label).join(', ');
+    let texto = '';
+    if (novoPost.tipoRecorrencia === 'Todos os dias') texto = 'Todos os dias';
+    else if (novoPost.tipoRecorrencia === 'Seg a sex') texto = 'De segunda a sexta';
+    else if (novoPost.tipoRecorrencia === 'Fins de semana') texto = 'Aos fins de semana';
+    else if (novoPost.tipoRecorrencia === 'Personalizado') {
+      if (novoPost.diasPersonalizados.length === 0) return 'Selecione os dias da semana acima';
+      const diasOrdenados = [...novoPost.diasPersonalizados].sort();
+      const nomes = diasOrdenados.map(id => {
+        const dia = DIAS_SEMANA.find(d => d.id === id);
+        return dia.nome === 'sábado' || dia.nome === 'domingo' ? `todo ${dia.nome}` : `toda ${dia.nome}`;
+      });
+      texto = nomes.join(', ').replace(/, ([^,]*)$/, ' e $1');
     }
-    return `Agendado: ${texto} às ${novoPost.hora}`;
+    return `Agendado para ${texto} às ${novoPost.hora}`;
   };
 
   const salvarNovoPost = () => {
-    if (!dataSelecionada || novoPost.redes.length === 0) {
-      Alert.alert("Atenção", "Preencha a data e selecione ao menos uma rede.");
-      return;
+    if (!dataSelecionada) { Alert.alert("Atenção", "Selecione uma data no calendário."); return; }
+    if (novoPost.redes.length === 0) { Alert.alert("Atenção", "Selecione pelo menos uma rede social."); return; }
+    
+    let datasAgendamento = [dataSelecionada];
+    if (novoPost.tipo === 'Story' && novoPost.tipoRecorrencia !== 'Nenhuma') {
+      let atual = dataSelecionada;
+      let gerados = 1;
+      while (gerados < 5) {
+        atual = adicionarDias(atual, 1);
+        const diaSemana = new Date(atual + 'T00:00:00').getDay();
+        let valido = false;
+        if (novoPost.tipoRecorrencia === 'Todos os dias') valido = true;
+        else if (novoPost.tipoRecorrencia === 'Seg a sex' && diaSemana >= 1 && diaSemana <= 5) valido = true;
+        else if (novoPost.tipoRecorrencia === 'Fins de semana' && (diaSemana === 0 || diaSemana === 6)) valido = true;
+        else if (novoPost.tipoRecorrencia === 'Personalizado' && novoPost.diasPersonalizados.includes(diaSemana)) valido = true;
+        if (valido) { datasAgendamento.push(atual); gerados++; }
+      }
     }
-    const novo = { ...novoPost, id: Math.random().toString(), date: dataSelecionada.split('-').reverse().join('/'), dateString: dataSelecionada, status: 'nao-visualizado', color: '#6a11cb' };
-    setPosts([...posts, novo]);
+
+    const novosPosts = datasAgendamento.map(dataStr => ({
+      ...novoPost,
+      id: Math.random().toString(),
+      date: dataStr.split('-').reverse().join('/'),
+      dateString: dataStr,
+      status: 'nao-visualizado',
+      type: novoPost.tipo,
+      color: '#6a11cb'
+    }));
+
+    setPosts([...posts, ...novosPosts]);
     setModalVisible(false);
     setNovoPost({ copy: '', redes: [], tipo: 'Feed', media: [], hora: '12:00', tipoRecorrencia: 'Nenhuma', diasPersonalizados: [] });
+    Alert.alert("Sucesso", "Agendamento registrado!");
   };
 
   const renderMarkedDates = () => {
     let marked = {};
     posts.forEach(p => {
       const eRecorrente = p.tipoRecorrencia && p.tipoRecorrencia !== 'Nenhuma';
+      let dotColor = p.status === 'nao-visualizado' ? '#6a11cb' : p.color;
       if (!marked[p.dateString]) {
         marked[p.dateString] = { dots: [], customStyles: eRecorrente ? { container: { borderWidth: 1, borderColor: '#6a11cb50', borderRadius: 5 } } : {} };
       }
-      marked[p.dateString].dots.push({ key: p.id, color: p.status === 'nao-visualizado' ? '#6a11cb' : p.color });
+      if (!marked[p.dateString].dots.find(d => d.key === p.id)) {
+        marked[p.dateString].dots.push({ key: p.id, color: dotColor, selectedDotColor: eRecorrente ? '#6a11cb' : dotColor });
+      }
     });
     if (dataSelecionada) {
       marked[dataSelecionada] = { ...marked[dataSelecionada], selected: true, selectedColor: '#6a11cb20', selectedTextColor: '#6a11cb' };
@@ -251,26 +336,32 @@ export default function CalendarScreen({ navigation }) {
           </View>
 
           <View style={styles.listContainer}>
-            <Text style={styles.listTitle}>{dataSelecionada ? `Posts para ${dataSelecionada}` : 'Próximos Posts'}</Text>
+            <View style={styles.listHeaderRow}>
+              <Text style={styles.listTitle}>{dataSelecionada ? `Posts para ${dataSelecionada}` : 'Próximos Posts'}</Text>
+              {dataSelecionada && <TouchableOpacity onPress={() => setDataSelecionada(null)}><Text style={styles.clearDateText}>Ver todos</Text></TouchableOpacity>}
+            </View>
             {postsFiltrados.map(post => <PostItem key={post.id} post={post} />)}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* MODAL PRINCIPAL DE AGENDAMENTO */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Novo Agendamento</Text>
+              <View>
+                <Text style={styles.modalTitle}>Novo Agendamento</Text>
+                <Text style={styles.modalSubtitle}>{dataSelecionada || 'Selecione uma data'}</Text>
+              </View>
               <TouchableOpacity onPress={() => setModalVisible(false)}><Ionicons name="close" size={28} color="#666" /></TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.label}>Horário da Postagem:</Text>
+              {/* O BOTÃO QUE VOCÊ QUERIA */}
               <TouchableOpacity style={styles.timeDropdown} onPress={() => setShowHoraPicker(true)}>
                 <Text style={styles.timeDropdownText}>{novoPost.hora}</Text>
-                <Ionicons name="time-outline" size={20} color="#6a11cb" />
+                <Ionicons name="time-outline" size={20} color="#c5a059" />
               </TouchableOpacity>
 
               <Text style={styles.label}>Mídia:</Text>
@@ -284,10 +375,10 @@ export default function CalendarScreen({ navigation }) {
                 ))}
               </ScrollView>
 
-              <Text style={styles.label}>Formato:</Text>
+              <Text style={styles.label}>Formato do Post:</Text>
               <View style={styles.typeGrid}>
                 {TIPOS_POST.map(tipo => (
-                  <TouchableOpacity key={tipo} style={[styles.typePill, novoPost.tipo === tipo && styles.typePillSelected]} onPress={() => setNovoPost({ ...novoPost, tipo, redes: [] })}>
+                  <TouchableOpacity key={tipo} style={[styles.typePill, novoPost.tipo === tipo && styles.typePillSelected]} onPress={() => setNovoPost({ ...novoPost, tipo })}>
                     <Text style={[styles.typePillText, novoPost.tipo === tipo && styles.typePillTextSelected]}>{tipo}</Text>
                   </TouchableOpacity>
                 ))}
@@ -303,23 +394,21 @@ export default function CalendarScreen({ navigation }) {
                       </TouchableOpacity>
                     ))}
                   </View>
-                  {renderResumoRecorrencia() && <View style={styles.summaryBox}><Text style={styles.summaryText}>{renderResumoRecorrencia()}</Text></View>}
                 </View>
               )}
 
               <Text style={styles.label}>Publicar em:</Text>
               <View style={styles.socialGrid}>
-                {REDES_SOCIAIS.map((rede) => {
-                  const compativel = rede.formatosPermitidos.includes(novoPost.tipo);
-                  const isSelected = novoPost.redes.includes(rede.id);
-                  return (
-                    <TouchableOpacity key={rede.id} disabled={!compativel} style={[styles.socialSquare, isSelected && styles.socialSquareSelected, !compativel && { opacity: 0.2 }]} onPress={() => alternarRede(rede.id)}>
-                      <Ionicons name={rede.icone} size={24} color={isSelected ? "#FFF" : "#555"} />
-                      <Text style={[styles.socialSquareText, isSelected && { color: '#FFF' }]}>{rede.nome}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {REDES_SOCIAIS.map((rede) => (
+                  <TouchableOpacity key={rede.id} style={[styles.socialSquare, novoPost.redes.includes(rede.id) && styles.socialSquareSelected]} onPress={() => alternarRede(rede.id)}>
+                    <Ionicons name={rede.icone} size={24} color={novoPost.redes.includes(rede.id) ? "#FFF" : "#555"} />
+                    <Text style={[styles.socialSquareText, novoPost.redes.includes(rede.id) && { color: '#FFF' }]}>{rede.nome}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+
+              <Text style={styles.label}>Legenda:</Text>
+              <TextInput style={styles.modalInput} placeholder="Digite a legenda..." value={novoPost.copy} onChangeText={(t) => setNovoPost({ ...novoPost, copy: t })} multiline />
 
               <TouchableOpacity style={styles.saveButton} onPress={salvarNovoPost}><Text style={styles.saveText}>Solicitar Produção</Text></TouchableOpacity>
             </ScrollView>
@@ -327,7 +416,6 @@ export default function CalendarScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* MINI MODAL DROPDOWN DE HORA */}
       <Modal visible={showHoraPicker} transparent animationType="fade">
         <TouchableOpacity style={styles.miniModalOverlay} activeOpacity={1} onPress={() => setShowHoraPicker(false)}>
           <View style={styles.miniModalContent}>
@@ -336,7 +424,6 @@ export default function CalendarScreen({ navigation }) {
               {HORARIOS_DISPONIVEIS.map((h) => (
                 <TouchableOpacity key={h} style={[styles.hourOption, novoPost.hora === h && styles.hourOptionSelected]} onPress={() => { setNovoPost({ ...novoPost, hora: h }); setShowHoraPicker(false); }}>
                   <Text style={[styles.hourOptionText, novoPost.hora === h && styles.hourOptionTextSelected]}>{h}</Text>
-                  {novoPost.hora === h && <Ionicons name="checkmark" size={18} color="#FFF" />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -349,25 +436,27 @@ export default function CalendarScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FB' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFF' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
   addButton: { backgroundColor: '#6a11cb', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  calendarWrapper: { backgroundColor: '#FFF', paddingBottom: 10 },
+  calendarWrapper: { backgroundColor: '#FFF' },
   filterBar: { flexDirection: 'row', paddingHorizontal: 20, marginTop: 15 },
   filterBtn: { paddingVertical: 6, paddingHorizontal: 15, borderRadius: 20, marginRight: 10, backgroundColor: '#EEE' },
   filterBtnActive: { backgroundColor: '#6a11cb' },
   filterText: { fontSize: 12, color: '#666', fontWeight: 'bold' },
   filterTextActive: { color: '#FFF' },
   listContainer: { padding: 20 },
-  listTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
+  listHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  listTitle: { fontSize: 18, fontWeight: 'bold' },
+  clearDateText: { fontSize: 12, color: '#6a11cb', fontWeight: 'bold' },
   postCard: { backgroundColor: '#FFF', borderRadius: 12, marginBottom: 12, borderLeftWidth: 5, elevation: 3 },
   postHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15 },
-  postHeaderLeft: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', flex: 1 },
+  postHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 10 },
   statusText: { fontSize: 10, fontWeight: 'bold' },
   badgePurple: { backgroundColor: '#6a11cb', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 10 },
   badgePurpleText: { color: '#FFF', fontSize: 9, fontWeight: 'bold' },
-  postDate: { fontSize: 13, color: '#666' },
+  postDate: { fontSize: 14, color: '#666' },
   expandedContent: { padding: 15, borderTopWidth: 1, borderTopColor: '#EEE' },
   tagsRow: { flexDirection: 'row', marginBottom: 15 },
   tagContainer: { backgroundColor: '#F0F0F0', padding: 6, borderRadius: 6, marginRight: 8 },
@@ -385,9 +474,10 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#FFF', padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: '90%' },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold' },
+  modalSubtitle: { fontSize: 12, color: '#666' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#555', marginTop: 15, marginBottom: 8 },
-  timeDropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 15, marginBottom: 10 },
-  timeDropdownText: { fontSize: 16, color: '#333', fontWeight: 'bold' },
+  timeDropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0f0f0f', borderWidth: 1, borderColor: '#c5a059', borderRadius: 10, padding: 15 },
+  timeDropdownText: { fontSize: 16, color: '#FFF', fontWeight: 'bold' },
   mediaPreviewContainer: { flexDirection: 'row', marginBottom: 15 },
   uploadButton: { width: 80, height: 80, borderStyle: 'dashed', borderWidth: 1, borderColor: '#6a11cb', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   thumbnailWrapper: { width: 80, height: 80, marginRight: 10, borderRadius: 10, overflow: 'hidden' },
@@ -396,26 +486,25 @@ const styles = StyleSheet.create({
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   typePill: { paddingVertical: 8, paddingHorizontal: 15, borderRadius: 20, backgroundColor: '#EEE', marginRight: 10, marginBottom: 10 },
   typePillSelected: { backgroundColor: '#6a11cb' },
-  typePillText: { fontWeight: 'bold', color: '#555', fontSize: 12 },
+  typePillText: { fontWeight: 'bold', color: '#555' },
   typePillTextSelected: { color: '#FFF' },
   recurrenceContainer: { backgroundColor: '#F8F9FB', padding: 15, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
   recPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DDD', marginRight: 8, marginBottom: 8 },
   recPillSelected: { backgroundColor: '#6a11cb', borderColor: '#6a11cb' },
-  recPillText: { fontSize: 11, fontWeight: 'bold', color: '#555' },
+  recPillText: { fontSize: 12, fontWeight: 'bold', color: '#555' },
   recPillTextSelected: { color: '#FFF' },
-  summaryBox: { backgroundColor: '#6a11cb15', padding: 10, borderRadius: 8, marginTop: 5 },
-  summaryText: { fontSize: 12, color: '#6a11cb', fontWeight: 'bold' },
   socialGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   socialSquare: { width: '30%', paddingVertical: 12, backgroundColor: '#EEE', borderRadius: 12, alignItems: 'center', marginBottom: 10, marginRight: '3%' },
   socialSquareSelected: { backgroundColor: '#6a11cb' },
-  socialSquareText: { fontSize: 10, fontWeight: 'bold', color: '#555', marginTop: 4 },
+  socialSquareText: { fontSize: 11, fontWeight: 'bold', marginTop: 4 },
+  modalInput: { borderWidth: 1, borderColor: '#DDD', borderRadius: 10, padding: 15, minHeight: 100 },
   saveButton: { backgroundColor: '#6a11cb', padding: 18, borderRadius: 10, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#FFF', fontWeight: 'bold' },
-  miniModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  miniModalContent: { backgroundColor: '#FFF', width: '80%', borderRadius: 15, padding: 20, elevation: 10 },
-  miniModalTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
-  hourOption: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 15, borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  hourOptionSelected: { backgroundColor: '#6a11cb', borderRadius: 8 },
-  hourOptionText: { fontSize: 16, color: '#555' },
-  hourOptionTextSelected: { color: '#FFF', fontWeight: 'bold' }
+  miniModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
+  miniModalContent: { backgroundColor: '#0f0f0f', width: '75%', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#c5a059' },
+  miniModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#c5a059', textAlign: 'center', marginBottom: 15 },
+  hourOption: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
+  hourOptionSelected: { backgroundColor: '#c5a05920' },
+  hourOptionText: { fontSize: 18, textAlign: 'center', color: '#FFF' },
+  hourOptionTextSelected: { color: '#c5a059', fontWeight: 'bold' }
 });
