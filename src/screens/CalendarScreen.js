@@ -613,7 +613,7 @@ export default function CalendarScreen({ navigation }) {
           <Text style={styles.tabText}>Dados</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tabItem}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Settings')}>
           <Ionicons name="settings-outline" size={26} color="#999" />
           <Text style={styles.tabText}>Ajustes</Text>
         </TouchableOpacity>

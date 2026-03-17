@@ -354,7 +354,7 @@ export default function AnalyticsScreen({ navigation }) {
                     <Text style={[styles.tabText, { color: '#6a11cb' }]}>Dados</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.tabItem}>
+                <TouchableOpacity style={styles.tabItem} onPress={() => navigation?.navigate('Settings')}>
                     <Ionicons name="settings-outline" size={26} color="#999" />
                     <Text style={styles.tabText}>Ajustes</Text>
                 </TouchableOpacity>
