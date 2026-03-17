@@ -204,6 +204,7 @@ export default function CalendarScreen({ navigation }) {
   const [dataSelecionada, setDataSelecionada] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('Todos');
+  const [modalConectarVisible, setModalConectarVisible] = useState(false);
   const massNotifyRotationValue = useRef(new Animated.Value(0)).current;
   const massNotifySoundwaveValue = useRef(new Animated.Value(0)).current;
   const [novoPost, setNovoPost] = useState({
@@ -536,7 +537,7 @@ export default function CalendarScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation?.goBack()}><Ionicons name="arrow-back" size={28} color="#333" /></TouchableOpacity>
+          
           <Text style={styles.headerTitle}>Agendamentos</Text>
           <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}><Ionicons name="add" size={24} color="#FFF" /></TouchableOpacity>
         </View>
@@ -587,6 +588,71 @@ export default function CalendarScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <View style={styles.bottomTab}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Dashboard')}>
+          <Ionicons name="home-outline" size={26} color="#999" />
+          <Text style={styles.tabText}>Início</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.tabItem}>
+          <Ionicons name="calendar" size={26} color="#6a11cb" />
+          <Text style={[styles.tabText, { color: '#6a11cb' }]}>Agenda</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.plusButton} onPress={() => setModalConectarVisible(true)}>
+          <Ionicons name="add" size={32} color="#FFF" />
+        </TouchableOpacity>
+
+        {/* ATUALIZADO: Aba de Aprovação mudou para Dados */}
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.navigate('Analytics')}
+        >
+          <Ionicons name="bar-chart-outline" size={26} color="#999" />
+          <Text style={styles.tabText}>Dados</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.tabItem}>
+          <Ionicons name="settings-outline" size={26} color="#999" />
+          <Text style={styles.tabText}>Ajustes</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={modalConectarVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeaderRow}>
+              <View>
+                <Text style={styles.modalTitle}>Integração de Módulos</Text>
+                <Text style={styles.modalSubtitle}>Autorize conexões para o workspace</Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalConectarVisible(false)}>
+                <Ionicons name="close" size={28} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {REDES_SOCIAIS.map(rede => (
+                <TouchableOpacity
+                  key={rede.id}
+                  style={styles.connectNetworkBtn}
+                  onPress={() => {
+                    Alert.alert('OAuth 2.0', `Redirecionando de forma segura para a API do ${rede.nome}...`);
+                  }}
+                >
+                  <View style={[styles.networkIconBg, { backgroundColor: rede.cor + '15' }]}>
+                    <Ionicons name={rede.icone} size={22} color={rede.cor} />
+                  </View>
+                  <Text style={styles.networkName}>{rede.nome}</Text>
+                  <Ionicons name="shield-checkmark" size={16} color="#43A047" style={{ marginRight: 8 }} />
+                  <Ionicons name="chevron-forward" size={20} color="#CCC" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -870,5 +936,12 @@ const styles = StyleSheet.create({
   hourOption: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#EEE' },
   hourOptionSelected: { backgroundColor: '#6a11cb20' },
   hourOptionText: { fontSize: 18, textAlign: 'center', color: '#000' },
-  hourOptionTextSelected: { color: '#6a11cb', fontWeight: 'bold' }
+  hourOptionTextSelected: { color: '#6a11cb', fontWeight: 'bold' },
+  bottomTab: { flexDirection: 'row', backgroundColor: '#FFF', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#EEE', justifyContent: 'space-around', alignItems: 'center' },
+  tabItem: { alignItems: 'center' },
+  tabText: { fontSize: 10, marginTop: 4, color: '#999' },
+  plusButton: { backgroundColor: '#6a11cb', width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginTop: -30, elevation: 5, shadowColor: '#6a11cb', shadowOpacity: 0.3, shadowRadius: 10 },
+  connectNetworkBtn: { flexDirection: 'row', alignItems: 'center', padding: 15, borderWidth: 1, borderColor: '#EEE', borderRadius: 12, marginBottom: 10, backgroundColor: '#FAFAFA' },
+  networkIconBg: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  networkName: { flex: 1, fontSize: 16, fontWeight: 'bold', color: '#333' }
 });
