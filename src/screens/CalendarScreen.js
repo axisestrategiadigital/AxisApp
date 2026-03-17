@@ -222,20 +222,48 @@ export default function CalendarScreen({ navigation }) {
       redes: ['instagram', 'linkedin'], type: 'Feed',
       copy: 'Dicas de iluminação natural para arquitetos.',
       media: [{ id: 'm2', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=400' }]
+    },
+    {
+      id: '3', date: '22/03/2026', dateString: '2026-03-22', hora: '14:00', status: 'ajustes', color: '#FFC107',
+      redes: ['instagram'], type: 'Story',
+      copy: 'Story interativo com enquete sobre o novo projeto.',
+      media: [{ id: 'm3', url: 'https://images.unsplash.com/photo-1587574293344-3VP152d6d66b?q=80&w=400' }]
     }
   ]);
 
   const postsFiltrados = useMemo(() => {
     let filtrados = posts;
-    if (dataSelecionada) filtrados = filtrados.filter(p => p.dateString === dataSelecionada);
+    if (dataSelecionada) {
+        filtrados = filtrados.filter(p => p.dateString === dataSelecionada);
+    }
+
     if (filtroStatus !== 'Todos') {
       if (filtroStatus === 'Pendente') {
         filtrados = filtrados.filter(p => p.status === 'pendente' || p.status === 'nao-visualizado');
+      } else if (filtroStatus === 'Ajustes') {
+        filtrados = filtrados.filter(p => p.status === 'ajustes');
       } else {
         filtrados = filtrados.filter(p => p.status === filtroStatus.toLowerCase());
       }
     }
-    return filtrados;
+
+    const statusPriority = {
+      'ajustes': 1,
+      'pendente': 2,
+      'nao-visualizado': 2,
+      'aprovado': 3,
+    };
+    
+    const sortedFiltrados = [...filtrados].sort((a, b) => {
+        const priorityA = statusPriority[a.status] || 99;
+        const priorityB = statusPriority[b.status] || 99;
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return new Date(a.dateString) - new Date(b.dateString);
+    });
+
+    return sortedFiltrados;
   }, [dataSelecionada, filtroStatus, posts]);
 
   const getFormatosPermitidos = (mediaArray) => {
@@ -415,6 +443,8 @@ export default function CalendarScreen({ navigation }) {
 
     setPosts([...posts, ...novosPosts]);
     setModalVisible(false);
+    setDataSelecionada(null);
+    setFiltroStatus('Todos');
     setNovoPost({ copy: '', redes: [], tipo: 'Feed', media: [], hora: '12:00', tipoRecorrencia: 'Nenhuma', diasPersonalizados: [] });
     Alert.alert("Sucesso", "Agendamento registrado!");
   };
@@ -507,7 +537,7 @@ export default function CalendarScreen({ navigation }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack()}><Ionicons name="arrow-back" size={28} color="#333" /></TouchableOpacity>
-          <Text style={styles.headerTitle}>Estratégia Digital</Text>
+          <Text style={styles.headerTitle}>Agendamentos</Text>
           <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}><Ionicons name="add" size={24} color="#FFF" /></TouchableOpacity>
         </View>
 
@@ -522,7 +552,7 @@ export default function CalendarScreen({ navigation }) {
           </View>
 
           <View style={styles.filterBar}>
-            {['Todos', 'Pendente', 'Aprovado'].map(f => (
+            {['Todos', 'Pendente', 'Ajustar', 'Aprovado'].map(f => (
               <TouchableOpacity key={f} onPress={() => setFiltroStatus(f)} style={[styles.filterBtn, filtroStatus === f && styles.filterBtnActive]}>
                 <Text style={[styles.filterText, filtroStatus === f && styles.filterTextActive]}>{f}</Text>
               </TouchableOpacity>
