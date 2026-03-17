@@ -1,8 +1,9 @@
-import React, { useState, memo, useMemo } from 'react';
+import React, { useState, memo, useMemo, useRef } from 'react';
 import {
   StyleSheet, View, Text, SafeAreaView, TouchableOpacity,
   ScrollView, Image, LayoutAnimation, Platform, UIManager,
-  TextInput, KeyboardAvoidingView, Keyboard, Modal, Alert
+  TextInput, KeyboardAvoidingView, Keyboard, Modal, Alert, FlatList,
+  Vibration, Animated, Easing
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,9 +28,18 @@ LocaleConfig.locales['pt-br'] = {
 };
 LocaleConfig.defaultLocale = 'pt-br';
 
+const REGRAS_PLATAFORMA = {
+  instagram: ['Feed', 'Story', 'Reels', 'Carrossel'],
+  tiktok: ['Reels'],
+  facebook: ['Feed', 'Story', 'Reels', 'Carrossel'],
+  linkedin: ['Feed', 'Carrossel'],
+  twitter: ['Feed', 'Carrossel'],
+  youtube: ['Feed', 'Reels'],
+};
+
 const REDES_SOCIAIS = [
   {
-    id: 'instagram', nome: 'Insta', icone: 'logo-instagram',
+    id: 'instagram', nome: 'Instagram', icone: 'logo-instagram',
     formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'],
     limitesVideo: { Reels: 900, Story: 60, Feed: 3600 }
   },
@@ -39,7 +49,7 @@ const REDES_SOCIAIS = [
     limitesVideo: { Reels: 600, Story: 60 }
   },
   {
-    id: 'facebook', nome: 'Face', icone: 'logo-facebook',
+    id: 'facebook', nome: 'Facebook', icone: 'logo-facebook',
     formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'],
     limitesVideo: { Feed: 14400, Reels: 90, Story: 60 }
   },
@@ -52,6 +62,11 @@ const REDES_SOCIAIS = [
     id: 'twitter', nome: 'X', icone: 'logo-twitter',
     formatosPermitidos: ['Feed', 'Carrossel'],
     limitesVideo: { Feed: 140 }
+  },
+  {
+    id: 'youtube', nome: 'YouTube', icone: 'logo-youtube',
+    formatosPermitidos: ['Feed', 'Reels', 'Story'],
+    limitesVideo: { Feed: 43200, Reels: 60, Story: 60 }
   }
 ];
 
@@ -68,7 +83,23 @@ const PostItem = memo(({ post }) => {
   const [estaAberto, setEstaAberto] = useState(false);
   const [textoResposta, setTextoResposta] = useState('');
   const [hasMessage, setHasMessage] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const rotationValue = new Animated.Value(0);
+  const soundwaveValue = new Animated.Value(0);
+
+  const startAnimation = () => {
+    rotationValue.setValue(0);
+    soundwaveValue.setValue(0);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(rotationValue, { toValue: 1, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(rotationValue, { toValue: -1, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(rotationValue, { toValue: 1, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(rotationValue, { toValue: 0, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+      ]),
+      Animated.timing(soundwaveValue, { toValue: 1, duration: 800, easing: Easing.linear, useNativeDriver: true }),
+    ]).start();
+  };
 
   const alternar = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -76,9 +107,26 @@ const PostItem = memo(({ post }) => {
   };
 
   const handleNotification = () => {
-    Alert.alert('Notificação Enviada', `O cliente foi notificado sobre a postagem do dia ${post.date}.`);
+    Vibration.vibrate();
+    startAnimation();
+    Alert.alert('Vibrando', `O cliente foi notificado sobre a postagem do dia ${post.date}.`);
   };
   
+  const rotation = rotationValue.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-25deg', '25deg'],
+  });
+
+  const soundwaveOpacity = soundwaveValue.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 1, 0],
+  });
+
+  const soundwavePosition = soundwaveValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 10],
+  });
+
   return (
     <View style={[styles.postCard, { borderLeftColor: post.color }]}>
       <TouchableOpacity onPress={alternar} activeOpacity={0.7} style={styles.postHeader}>
@@ -126,14 +174,21 @@ const PostItem = memo(({ post }) => {
                 <Text style={styles.actionButtonText}>Responder</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity 
-                style={[styles.actionButton, isHovered && styles.actionButtonHover]} 
-                onPress={handleNotification}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPressIn={handleNotification}
+                activeOpacity={0.6}
               >
-                <Ionicons name="cellular-outline" size={24} color={isHovered ? '#6a11cb' : '#555'} />
-                <Text style={[styles.actionButtonText, isHovered && styles.actionButtonTextHover]}>Notificar Cliente</Text>
+                <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+                  <Ionicons name="notifications-outline" size={24} color={'#555'} />
+                </Animated.View>
+                <Animated.View style={{ position: 'absolute', opacity: soundwaveOpacity, transform: [{ translateX: soundwavePosition }, { rotate: '-30deg' }] }}>
+                  <Ionicons name="remove-outline" size={16} color={'#555'} />
+                </Animated.View>
+                <Animated.View style={{ position: 'absolute', opacity: soundwaveOpacity, transform: [{ translateX: -soundwavePosition }, { rotate: '30deg' }] }}>
+                  <Ionicons name="remove-outline" size={16} color={'#555'} />
+                </Animated.View>
+                <Text style={styles.actionButtonText}>Notificar Cliente</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -144,10 +199,13 @@ const PostItem = memo(({ post }) => {
 });
 
 export default function CalendarScreen({ navigation }) {
+  const [modalHoraVisible, setModalHoraVisible] = useState(false);
   const [showHoraPicker, setShowHoraPicker] = useState(false);
   const [dataSelecionada, setDataSelecionada] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('Todos');
+  const massNotifyRotationValue = useRef(new Animated.Value(0)).current;
+  const massNotifySoundwaveValue = useRef(new Animated.Value(0)).current;
   const [novoPost, setNovoPost] = useState({
     copy: '', redes: [], tipo: 'Feed', media: [], hora: '12:00', tipoRecorrencia: 'Nenhuma', diasPersonalizados: []
   });
@@ -226,10 +284,60 @@ export default function CalendarScreen({ navigation }) {
     });
   };
 
+  const isLocked = (formato, redes) => {
+    const redesSelecionadas = redes || novoPost.redes; // Allow passing override
+    if (redesSelecionadas.length === 0) {
+      return false;
+    }
+    for (const redeId of redesSelecionadas) {
+      if (!REGRAS_PLATAFORMA[redeId] || !REGRAS_PLATAFORMA[redeId].includes(formato)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const isPlatformLocked = (redeId) => {
+    const formatoSelecionado = novoPost.tipo;
+    if (!formatoSelecionado) {
+      return false;
+    }
+    if (!REGRAS_PLATAFORMA[redeId] || !REGRAS_PLATAFORMA[redeId].includes(formatoSelecionado)) {
+      return true;
+    }
+    return false;
+  };
+
+  const permiteLegenda = () => {
+    if (novoPost.tipo === 'Story') {
+      return false;
+    }
+    return true;
+  };
+
+  const handleFormatChange = (novoTipo) => {
+    const redesAtuais = novoPost.redes;
+    const redesValidas = redesAtuais.filter(redeId => 
+        REGRAS_PLATAFORMA[redeId] && REGRAS_PLATAFORMA[redeId].includes(novoTipo)
+    );
+    const novaLegenda = novoTipo === 'Story' ? '' : novoPost.copy;
+    setNovoPost({ ...novoPost, tipo: novoTipo, redes: redesValidas, copy: novaLegenda });
+  };
+
   const alternarRede = (redeId) => {
     setNovoPost(prev => {
       const selecionadas = prev.redes.includes(redeId) ? prev.redes.filter(r => r !== redeId) : [...prev.redes, redeId];
-      return { ...prev, redes: selecionadas };
+      
+      const formatosPermitidosAgora = TIPOS_POST.filter(f => !isLocked(f, selecionadas));
+      
+      let novoTipo = prev.tipo;
+      if (!formatosPermitidosAgora.includes(novoTipo)) {
+        novoTipo = formatosPermitidosAgora.length > 0 ? formatosPermitidosAgora[0] : 'Feed';
+      }
+
+      const novaLegenda = novoTipo === 'Story' ? '' : prev.copy;
+
+      return { ...prev, redes: selecionadas, tipo: novoTipo, copy: novaLegenda };
     });
   };
 
@@ -329,6 +437,71 @@ export default function CalendarScreen({ navigation }) {
     return marked;
   };
 
+  const getListTitle = () => {
+    if (dataSelecionada) {
+      return `Posts para ${dataSelecionada.split('-').reverse().join('/')}`;
+    }
+    if (filtroStatus !== 'Todos') {
+      return `Posts: ${filtroStatus}`;
+    }
+    return 'Próximos Posts';
+  };
+
+  const startMassNotifyAnimation = () => {
+    massNotifyRotationValue.setValue(0);
+    massNotifySoundwaveValue.setValue(0);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(massNotifyRotationValue, { toValue: 1, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(massNotifyRotationValue, { toValue: -1, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(massNotifyRotationValue, { toValue: 1, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(massNotifyRotationValue, { toValue: 0, duration: 200, easing: Easing.linear, useNativeDriver: true }),
+      ]),
+      Animated.timing(massNotifySoundwaveValue, { toValue: 1, duration: 800, easing: Easing.linear, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const massNotifyRotation = massNotifyRotationValue.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-25deg', '25deg'],
+  });
+
+  const massNotifySoundwaveOpacity = massNotifySoundwaveValue.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 1, 0],
+  });
+
+  const massNotifySoundwavePosition = massNotifySoundwaveValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 10],
+  });
+
+  const notificarTodosPendentes = () => {
+    startMassNotifyAnimation();
+    Vibration.vibrate([200, 100, 200]);
+    
+    const pendentes = postsFiltrados.filter(p => p.status === 'pendente' || p.status === 'nao-visualizado');
+    if (pendentes.length > 0) {
+      Alert.alert(
+        'Notificar em Massa',
+        `Você tem certeza que quer notificar o cliente sobre ${pendentes.length} post${pendentes.length > 1 ? 's' : ''} pendente${pendentes.length > 1 ? 's' : ''}?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Notificar',
+            onPress: () => {
+              // In a real app, you might want to call an API or update the state.
+              Alert.alert('Notificados!', `${pendentes.length} post${pendentes.length > 1 ? 's' : ''} foram notificados.`);
+            }
+          }
+        ]
+      );
+    } else {
+      Alert.alert('Nenhum Post Pendente', 'Não há posts com status "Pendente" ou "Não visualizado" na lista atual.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -358,10 +531,29 @@ export default function CalendarScreen({ navigation }) {
 
           <View style={styles.listContainer}>
             <View style={styles.listHeaderRow}>
-              <Text style={styles.listTitle}>{dataSelecionada ? `Posts para ${dataSelecionada}` : 'Próximos Posts'}</Text>
-              {dataSelecionada && <TouchableOpacity onPress={() => setDataSelecionada(null)}><Text style={styles.clearDateText}>Ver todos</Text></TouchableOpacity>}
+              <Text style={styles.listTitle}>{getListTitle()}</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                {filtroStatus === 'Pendente' && !dataSelecionada && postsFiltrados.length > 0 && (
+                  <TouchableOpacity onPressIn={notificarTodosPendentes} style={{marginRight: 15, padding: 5}}>
+                    <Animated.View style={{ transform: [{ rotate: massNotifyRotation }] }}>
+                      <Ionicons name="notifications-outline" size={24} color="#6a11cb" />
+                    </Animated.View>
+                    <Animated.View style={{ position: 'absolute', top: 5, left: 5, opacity: massNotifySoundwaveOpacity, transform: [{ translateX: massNotifySoundwavePosition }, { rotate: '-30deg' }] }}>
+                      <Ionicons name="remove-outline" size={16} color="#6a11cb" />
+                    </Animated.View>
+                    <Animated.View style={{ position: 'absolute', top: 5, left: 5, opacity: massNotifySoundwaveOpacity, transform: [{ translateX: -massNotifySoundwavePosition }, { rotate: '30deg' }] }}>
+                      <Ionicons name="remove-outline" size={16} color="#6a11cb" />
+                    </Animated.View>
+                  </TouchableOpacity>
+                )}
+                {dataSelecionada && <TouchableOpacity onPress={() => setDataSelecionada(null)}><Text style={styles.clearDateText}>Ver todos</Text></TouchableOpacity>}
+              </View>
             </View>
-            {postsFiltrados.map(post => <PostItem key={post.id} post={post} />)}
+            {postsFiltrados.length > 0 ? (
+              postsFiltrados.map(post => <PostItem key={post.id} post={post} />)
+            ) : (
+              <Text style={{textAlign: 'center', color: '#666', marginTop: 20}}>Nenhum post encontrado para os filtros selecionados.</Text>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -372,7 +564,6 @@ export default function CalendarScreen({ navigation }) {
             <View style={styles.modalHeaderRow}>
               <View>
                 <Text style={styles.modalTitle}>Novo Agendamento</Text>
-                <Text style={styles.modalSubtitle}>{dataSelecionada || 'Selecione uma data'}</Text>
               </View>
               <TouchableOpacity onPress={() => setModalVisible(false)}><Ionicons name="close" size={28} color="#666" /></TouchableOpacity>
             </View>
@@ -398,11 +589,33 @@ export default function CalendarScreen({ navigation }) {
 
               <Text style={styles.label}>Formato do Post:</Text>
               <View style={styles.typeGrid}>
-                {TIPOS_POST.map(tipo => (
-                  <TouchableOpacity key={tipo} style={[styles.typePill, novoPost.tipo === tipo && styles.typePillSelected]} onPress={() => setNovoPost({ ...novoPost, tipo })}>
-                    <Text style={[styles.typePillText, novoPost.tipo === tipo && styles.typePillTextSelected]}>{tipo}</Text>
-                  </TouchableOpacity>
-                ))}
+                {TIPOS_POST.map(tipo => {
+                  const locked = isLocked(tipo);
+                  return (
+                    <TouchableOpacity
+                      key={tipo}
+                      style={[
+                        styles.typePill,
+                        novoPost.tipo === tipo && styles.typePillSelected,
+                        locked && styles.lockedPill
+                      ]}
+                      onPress={() => {
+                        if (!locked) {
+                          handleFormatChange(tipo);
+                        }
+                      }}
+                      disabled={locked}
+                      activeOpacity={locked ? 1.0 : 0.7}
+                    >
+                      <Text style={[styles.typePillText, novoPost.tipo === tipo && styles.typePillTextSelected]}>{tipo}</Text>
+                      {locked && (
+                        <View style={styles.lockIconContainer}>
+                          <Ionicons name="lock-closed" size={14} color="#FFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {novoPost.tipo === 'Story' && (
@@ -434,18 +647,61 @@ export default function CalendarScreen({ navigation }) {
 
               <Text style={styles.label}>Publicar em:</Text>
               <View style={styles.socialGrid}>
-                {REDES_SOCIAIS.map((rede) => (
-                  <TouchableOpacity key={rede.id} style={[styles.socialSquare, novoPost.redes.includes(rede.id) && styles.socialSquareSelected]} onPress={() => alternarRede(rede.id)}>
-                    <Ionicons name={rede.icone} size={24} color={novoPost.redes.includes(rede.id) ? "#FFF" : "#555"} />
-                    <Text style={[styles.socialSquareText, novoPost.redes.includes(rede.id) && { color: '#FFF' }]}>{rede.nome}</Text>
-                  </TouchableOpacity>
-                ))}
+                {REDES_SOCIAIS.map((rede) => {
+                  const locked = isPlatformLocked(rede.id);
+                  return (
+                    <TouchableOpacity
+                      key={rede.id}
+                      style={[
+                        styles.socialSquare,
+                        novoPost.redes.includes(rede.id) && styles.socialSquareSelected,
+                        locked && styles.lockedPill
+                      ]}
+                      onPress={() => {
+                        if (!locked) {
+                          alternarRede(rede.id);
+                        }
+                      }}
+                      disabled={locked}
+                      activeOpacity={locked ? 1.0 : 0.7}
+                    >
+                      <Ionicons name={rede.icone} size={24} color={novoPost.redes.includes(rede.id) && !locked ? "#FFF" : "#555"} />
+                      <Text style={[styles.socialSquareText, novoPost.redes.includes(rede.id) && !locked && { color: '#FFF' }]}>{rede.nome}</Text>
+                      {locked && (
+                        <View style={styles.lockIconContainer}>
+                          <Ionicons name="lock-closed" size={14} color="#FFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               <Text style={styles.label}>Legenda:</Text>
-              <TextInput style={styles.modalInput} placeholder="Digite a legenda..." value={novoPost.copy} onChangeText={(t) => setNovoPost({ ...novoPost, copy: t })} multiline />
+              <View style={{position: 'relative', marginBottom: 15}}>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    !permiteLegenda() && styles.lockedInput
+                  ]}
+                  placeholder={permiteLegenda() ? "Digite a legenda..." : "Este formato não permite legenda."}
+                  value={novoPost.copy}
+                  onChangeText={(t) => {
+                    if (permiteLegenda()) {
+                      setNovoPost({ ...novoPost, copy: t });
+                    }
+                  }}
+                  editable={permiteLegenda()}
+                  multiline
+                />
+                {!permiteLegenda() && (
+                  <View style={styles.lockIconContainerInput}>
+                    <Ionicons name="lock-closed" size={16} color="#FFF" />
+                  </View>
+                )}
+              </View>
 
-              <TouchableOpacity style={styles.saveButton} onPress={salvarNovoPost}><Text style={styles.saveText}>Solicitar Produção</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={salvarNovoPost}><Text style={styles.saveText}>Agendar Post</Text></TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -514,13 +770,6 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0'
   },
   actionButtonText: { marginLeft: 10, color: '#555', fontWeight: 'bold' },
-  actionButtonHover: {
-    backgroundColor: '#6a11cb10',
-    borderColor: '#6a11cb'
-  },
-  actionButtonTextHover: {
-    color: '#6a11cb'
-  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: '90%' },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
@@ -539,6 +788,20 @@ const styles = StyleSheet.create({
   typePillSelected: { backgroundColor: '#6a11cb' },
   typePillText: { fontWeight: 'bold', color: '#555' },
   typePillTextSelected: { color: '#FFF' },
+  lockedPill: {
+    opacity: 0.5,
+  },
+  lockIconContainer: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: 'rgba(40,40,40,0.8)',
+    borderRadius: 20,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   recurrenceContainer: { backgroundColor: '#F8F9FB', padding: 15, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EEE' },
   recPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DDD', marginRight: 8, marginBottom: 8 },
   recPillSelected: { backgroundColor: '#6a11cb', borderColor: '#6a11cb' },
@@ -553,6 +816,21 @@ const styles = StyleSheet.create({
   socialSquare: { width: '30%', paddingVertical: 12, backgroundColor: '#EEE', borderRadius: 12, alignItems: 'center', marginBottom: 10, marginRight: '3%' },
   socialSquareSelected: { backgroundColor: '#6a11cb' },
   socialSquareText: { fontSize: 11, fontWeight: 'bold', marginTop: 4 },
+  lockedInput: {
+    backgroundColor: '#F0F0F0',
+    opacity: 0.7,
+  },
+  lockIconContainerInput: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(40,40,40,0.7)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   modalInput: { borderWidth: 1, borderColor: '#DDD', borderRadius: 10, padding: 15, minHeight: 100 },
   saveButton: { backgroundColor: '#6a11cb', padding: 18, borderRadius: 10, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#FFF', fontWeight: 'bold' },
