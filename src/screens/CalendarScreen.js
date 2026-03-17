@@ -39,32 +39,32 @@ const REGRAS_PLATAFORMA = {
 
 const REDES_SOCIAIS = [
   {
-    id: 'instagram', nome: 'Instagram', icone: 'logo-instagram',
+    id: 'instagram', nome: 'Instagram', icone: 'logo-instagram', cor: '#E1306C',
     formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'],
     limitesVideo: { Reels: 900, Story: 60, Feed: 3600 }
   },
   {
-    id: 'tiktok', nome: 'TikTok', icone: 'logo-tiktok',
+    id: 'tiktok', nome: 'TikTok', icone: 'logo-tiktok', cor: '#000000',
     formatosPermitidos: ['Reels', 'Story'],
     limitesVideo: { Reels: 600, Story: 60 }
   },
   {
-    id: 'facebook', nome: 'Facebook', icone: 'logo-facebook',
+    id: 'facebook', nome: 'Facebook', icone: 'logo-facebook', cor: '#1877F2',
     formatosPermitidos: ['Feed', 'Reels', 'Carrossel', 'Story'],
     limitesVideo: { Feed: 14400, Reels: 90, Story: 60 }
   },
   {
-    id: 'linkedin', nome: 'LinkedIn', icone: 'logo-linkedin',
+    id: 'linkedin', nome: 'LinkedIn', icone: 'logo-linkedin', cor: '#0A66C2',
     formatosPermitidos: ['Feed', 'Carrossel'],
     limitesVideo: { Feed: 600 }
   },
   {
-    id: 'twitter', nome: 'X', icone: 'logo-twitter',
+    id: 'twitter', nome: 'X', icone: 'logo-twitter', cor: '#000000',
     formatosPermitidos: ['Feed', 'Carrossel'],
     limitesVideo: { Feed: 140 }
   },
   {
-    id: 'youtube', nome: 'YouTube', icone: 'logo-youtube',
+    id: 'youtube', nome: 'YouTube', icone: 'logo-youtube', cor: '#FF0000',
     formatosPermitidos: ['Feed', 'Reels', 'Story'],
     limitesVideo: { Feed: 43200, Reels: 60, Story: 60 }
   }
