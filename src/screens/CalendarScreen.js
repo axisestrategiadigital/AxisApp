@@ -67,12 +67,18 @@ const DIAS_SEMANA = [
 const PostItem = memo(({ post }) => {
   const [estaAberto, setEstaAberto] = useState(false);
   const [textoResposta, setTextoResposta] = useState('');
+  const [hasMessage, setHasMessage] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const alternar = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setEstaAberto(!estaAberto);
   };
 
+  const handleNotification = () => {
+    Alert.alert('Notificação Enviada', `O cliente foi notificado sobre a postagem do dia ${post.date}.`);
+  };
+  
   return (
     <View style={[styles.postCard, { borderLeftColor: post.color }]}>
       <TouchableOpacity onPress={alternar} activeOpacity={0.7} style={styles.postHeader}>
@@ -113,17 +119,23 @@ const PostItem = memo(({ post }) => {
           <Text style={styles.expandedSectionTitle}>Legenda:</Text>
           <Text style={styles.expandedCopy}>{post.copy || "Este formato não utiliza legenda externa."}</Text>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Solicitar ajuste..."
-              value={textoResposta}
-              onChangeText={setTextoResposta}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={() => { Alert.alert('Enviado', 'Feedback enviado para a agência.'); setTextoResposta(''); Keyboard.dismiss(); }}>
-              <Ionicons name="send" size={20} color="#FFF" />
-            </TouchableOpacity>
+          <View style={styles.actionButtonsContainer}>
+            {hasMessage ? (
+              <TouchableOpacity style={styles.actionButton} onPress={() => { /* lógica de resposta */ }}>
+                <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6a11cb" />
+                <Text style={styles.actionButtonText}>Responder</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.actionButton, isHovered && styles.actionButtonHover]} 
+                onPress={handleNotification}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                <Ionicons name="cellular-outline" size={24} color={isHovered ? '#6a11cb' : '#555'} />
+                <Text style={[styles.actionButtonText, isHovered && styles.actionButtonTextHover]}>Notificar Cliente</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}
@@ -218,6 +230,15 @@ export default function CalendarScreen({ navigation }) {
     setNovoPost(prev => {
       const selecionadas = prev.redes.includes(redeId) ? prev.redes.filter(r => r !== redeId) : [...prev.redes, redeId];
       return { ...prev, redes: selecionadas };
+    });
+  };
+
+  const alternarDiaSemana = (diaId) => {
+    setNovoPost(prev => {
+      const dias = prev.diasPersonalizados.includes(diaId) 
+        ? prev.diasPersonalizados.filter(d => d !== diaId) 
+        : [...prev.diasPersonalizados, diaId];
+      return { ...prev, diasPersonalizados: dias };
     });
   };
 
@@ -361,7 +382,7 @@ export default function CalendarScreen({ navigation }) {
               {/* O BOTÃO QUE VOCÊ QUERIA */}
               <TouchableOpacity style={styles.timeDropdown} onPress={() => setShowHoraPicker(true)}>
                 <Text style={styles.timeDropdownText}>{novoPost.hora}</Text>
-                <Ionicons name="time-outline" size={20} color="#c5a059" />
+                <Ionicons name="time-outline" size={20} color="#6a11cb" />
               </TouchableOpacity>
 
               <Text style={styles.label}>Mídia:</Text>
@@ -394,6 +415,20 @@ export default function CalendarScreen({ navigation }) {
                       </TouchableOpacity>
                     ))}
                   </View>
+                  
+                  {novoPost.tipoRecorrencia === 'Personalizado' && (
+                    <View style={styles.weekDaySelector}>
+                      {DIAS_SEMANA.map(dia => (
+                        <TouchableOpacity 
+                          key={dia.id} 
+                          style={[styles.dayPill, novoPost.diasPersonalizados.includes(dia.id) && styles.dayPillSelected]} 
+                          onPress={() => alternarDiaSemana(dia.id)}
+                        >
+                          <Text style={[styles.dayPillText, novoPost.diasPersonalizados.includes(dia.id) && styles.dayPillTextSelected]}>{dia.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -456,7 +491,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: 'bold' },
   badgePurple: { backgroundColor: '#6a11cb', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 10 },
   badgePurpleText: { color: '#FFF', fontSize: 9, fontWeight: 'bold' },
-  postDate: { fontSize: 14, color: '#666' },
+  postDate: { fontSize: 14, color: '#6a11cb' },
   expandedContent: { padding: 15, borderTopWidth: 1, borderTopColor: '#EEE' },
   tagsRow: { flexDirection: 'row', marginBottom: 15 },
   tagContainer: { backgroundColor: '#F0F0F0', padding: 6, borderRadius: 6, marginRight: 8 },
@@ -467,17 +502,33 @@ const styles = StyleSheet.create({
   videoIndicator: { position: 'absolute', top: '40%', left: '45%', backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 30 },
   expandedSectionTitle: { fontSize: 13, fontWeight: 'bold', color: '#333', marginBottom: 8 },
   expandedCopy: { fontSize: 14, color: '#666', marginBottom: 20 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center' },
-  input: { flex: 1, backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 12, marginRight: 10 },
-  sendButton: { backgroundColor: '#6a11cb', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center' },
+  actionButtonsContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  actionButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'transparent', 
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#E0E0E0'
+  },
+  actionButtonText: { marginLeft: 10, color: '#555', fontWeight: 'bold' },
+  actionButtonHover: {
+    backgroundColor: '#6a11cb10',
+    borderColor: '#6a11cb'
+  },
+  actionButtonTextHover: {
+    color: '#6a11cb'
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', padding: 25, borderTopLeftRadius: 25, borderTopRightRadius: 25, maxHeight: '90%' },
   modalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold' },
   modalSubtitle: { fontSize: 12, color: '#666' },
   label: { fontSize: 14, fontWeight: 'bold', color: '#555', marginTop: 15, marginBottom: 8 },
-  timeDropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0f0f0f', borderWidth: 1, borderColor: '#c5a059', borderRadius: 10, padding: 15 },
-  timeDropdownText: { fontSize: 16, color: '#FFF', fontWeight: 'bold' },
+  timeDropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#6a11cb', borderRadius: 10, padding: 15 },
+  timeDropdownText: { fontSize: 16, color: '#6a11cb', fontWeight: 'bold' },
   mediaPreviewContainer: { flexDirection: 'row', marginBottom: 15 },
   uploadButton: { width: 80, height: 80, borderStyle: 'dashed', borderWidth: 1, borderColor: '#6a11cb', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   thumbnailWrapper: { width: 80, height: 80, marginRight: 10, borderRadius: 10, overflow: 'hidden' },
@@ -493,6 +544,11 @@ const styles = StyleSheet.create({
   recPillSelected: { backgroundColor: '#6a11cb', borderColor: '#6a11cb' },
   recPillText: { fontSize: 12, fontWeight: 'bold', color: '#555' },
   recPillTextSelected: { color: '#FFF' },
+  weekDaySelector: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#F0F0F0', paddingVertical: 10, borderRadius: 10, marginTop: 10 },
+  dayPill: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#DDD' },
+  dayPillSelected: { backgroundColor: '#6a11cb', borderColor: '#6a11cb' },
+  dayPillText: { fontWeight: 'bold', color: '#555' },
+  dayPillTextSelected: { color: '#FFF' },
   socialGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   socialSquare: { width: '30%', paddingVertical: 12, backgroundColor: '#EEE', borderRadius: 12, alignItems: 'center', marginBottom: 10, marginRight: '3%' },
   socialSquareSelected: { backgroundColor: '#6a11cb' },
@@ -501,10 +557,10 @@ const styles = StyleSheet.create({
   saveButton: { backgroundColor: '#6a11cb', padding: 18, borderRadius: 10, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#FFF', fontWeight: 'bold' },
   miniModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
-  miniModalContent: { backgroundColor: '#0f0f0f', width: '75%', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#c5a059' },
-  miniModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#c5a059', textAlign: 'center', marginBottom: 15 },
-  hourOption: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#222' },
-  hourOptionSelected: { backgroundColor: '#c5a05920' },
-  hourOptionText: { fontSize: 18, textAlign: 'center', color: '#FFF' },
-  hourOptionTextSelected: { color: '#c5a059', fontWeight: 'bold' }
+  miniModalContent: { backgroundColor: '#FFF', width: '75%', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#6a11cb' },
+  miniModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#6a11cb', textAlign: 'center', marginBottom: 15 },
+  hourOption: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#EEE' },
+  hourOptionSelected: { backgroundColor: '#6a11cb20' },
+  hourOptionText: { fontSize: 18, textAlign: 'center', color: '#000' },
+  hourOptionTextSelected: { color: '#6a11cb', fontWeight: 'bold' }
 });
